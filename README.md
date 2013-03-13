@@ -6,12 +6,13 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 
 ## Data Source Name Format
 
-  mysql[s]://[user[:password]][@host][/database][?param&...]
+    mysql[s]://[user[:password]][@host][:port][/database][?param&...]
 
 * use mysqls:// to establish an SSL connection
 * user defaults to root
 * password defaults to blank
 * host defaults to localhost
+* port defaults to 3306
 * use query paramteter ssl-insecure-skip-verify to skip SSL certificate verification
 * use query paramteter debug to log request and MySQL warnings to stdout
 
