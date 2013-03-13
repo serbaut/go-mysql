@@ -17,12 +17,12 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 
 ## Features
 
-* longtext and longblob > 16MB
-* SSL (?ssl-insecure-skip-verify to skip verification)
+* longtext and longblob > 16MB support
+* SSL support
 
 ## Installation
 
-   go get github/serbaut/go-mysql
+    go get github/serbaut/go-mysql
 
 ## Usage
 
@@ -33,15 +33,15 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 
     func main() {
         db, err := sql.Open("mysql", "mysql://gopher2:secret@localhost/mydb")
-    	...
+        ...
     }
 
 ## Testing
 
-   mysql@localhost> grant all on test.* to gopher1@localhost;
-   mysql@localhost> grant all on test.* to gopher2@localhost identified by 'secret';
+    mysql@localhost> grant all on test.* to gopher1@localhost;
+    mysql@localhost> grant all on test.* to gopher2@localhost identified by 'secret';
 
-   $ go test
+    $ go test
 
 Note: The new go scheduler (as of 2013-03-13) needs test -cpu=2 to
 give good benchmark results. Dmitriy is working on it.
