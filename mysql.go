@@ -491,7 +491,7 @@ func (st *stmt) sendLongArgs(args []driver.Value) error {
 
 func (st *stmt) query(args []driver.Value) (r *result, err error) {
 	if err = st.sendLongArgs(args); err != nil {
-		return err
+		return nil, err
 	}
 
 	p := newPacket(0)
