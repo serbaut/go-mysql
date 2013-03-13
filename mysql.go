@@ -491,7 +491,7 @@ func (st *stmt) sendLongArgs(args []driver.Value) error {
 
 func (st *stmt) query(args []driver.Value) (r *result, err error) {
 	if err = st.sendLongArgs(args); err != nil {
-		return
+		return err
 	}
 
 	p := newPacket(0)
@@ -606,14 +606,16 @@ func (r *result) Next(dest []driver.Value) (err error) {
 			nullMask = nullMask[2:]
 			for i := range dest {
 				if !nullMask[i] {
-					if dest[i], err = p.ReadValue(r.columns[i].coltype, r.columns[i].flags); err != nil {
+					dest[i], err = p.ReadValue(r.columns[i].coltype, r.columns[i].flags)
+					if err != nil {
 						return err
 					}
 				}
 			}
 		} else {
 			for i := range dest {
-				if dest[i], err = p.ReadTextValue(r.columns[i].coltype, r.columns[i].flags); err != nil {
+				dest[i], err = p.ReadTextValue(r.columns[i].coltype, r.columns[i].flags)
+				if err != nil {
 					return err
 				}
 			}
