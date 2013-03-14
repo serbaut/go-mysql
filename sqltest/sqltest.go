@@ -302,7 +302,7 @@ func TestPreparedStmt(t *testing.T) {
 // Benchmarks need to use panic() since b.Error errors are lost when
 // running via testing.Benchmark() I would like to run these via go
 // test -bench but calling Benchmark() from a benchmark test
-// currentyly hangs go.
+// currently hangs go.
 
 func BenchmarkExec(b *testing.B) {
 	for i := 0; i < b.N; i++ {
