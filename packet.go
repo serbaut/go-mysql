@@ -247,6 +247,7 @@ func (p *packet) WriteArgs(args []driver.Value) error {
 				v.Write(t)
 			}
 		case time.Time:
+			t = t.UTC()
 			p.WriteUint16(MYSQL_TYPE_DATETIME)
 			v.WriteByte(7)
 			v.WriteUint16(uint16(t.Year()))

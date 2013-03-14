@@ -52,12 +52,13 @@ func TestTypes(t *testing.T) {
 		{"int unsigned", "4294967295", uint32(4294967295)},
 		{"bigint", "9223372036854775807", int64(9223372036854775807)},
 		{"float", "0.123456", float32(0.123456)},
-		{"double", "0.123456789012345", 0.123456789012345},
+		{"double", "0.12345678901234", 0.123456789012345},
 		{"decimal(7,6)", "0.123456", float32(0.123456)},
 		{"bool", "true", true},
 		{"bit(10)", "256", []byte{1, 0}},
 		{"timestamp", "'2001-02-03 01:02:03'", time.Date(2001, 2, 3, 1, 2, 3, 0, time.UTC)},
 		{"datetime", "'1111-02-03 01:02:03'", time.Date(1111, 2, 3, 1, 2, 3, 0, time.UTC)},
+		{"datetime", "'2001-02-03 00:02:03'", time.Date(2001, 2, 3, 1, 2, 3, 0, time.FixedZone("", +3600))},
 		{"date", "'2222-02-03'", time.Date(2222, 2, 3, 0, 0, 0, 0, time.UTC)},
 		// pending support for time.Duration in database/sql:
 		//{"time", "'-100:01:59'", time.Duration(-(100*time.Hour + 1*time.Minute + 59*time.Second))},
@@ -165,8 +166,16 @@ func TestTypes(t *testing.T) {
 				if err := r.Scan(&null1, &got, &null2); err != nil {
 					t.Fatal(err)
 				}
-				if fmt.Sprintf("%.15f", got) != tt.sval {
+				if fmt.Sprintf("%.14f", got) != tt.sval {
 					t.Errorf("%v: got %v, want %v", tt, got, want)
+				}
+			case time.Time:
+				var got time.Time
+				if err := r.Scan(&null1, &got, &null2); err != nil {
+					t.Fatal(err)
+				}
+				if got.UTC() != want.UTC() {
+					t.Errorf("%v: got %v, want %v", tt, got.UTC(), want.UTC())
 				}
 			default:
 				v := reflect.New(reflect.ValueOf(tt.val).Type())
