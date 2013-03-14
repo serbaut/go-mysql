@@ -23,7 +23,7 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 
 ## Installation
 
-    go get github/serbaut/go-mysql
+    go get github.com/serbaut/go-mysql
 
 ## Usage
 
