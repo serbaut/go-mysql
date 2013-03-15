@@ -44,5 +44,3 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 
     $ go test
 
-Note: The new go scheduler (as of 2013-03-13) needs test -cpu=2 to
-give good benchmark results. Dmitriy is working on it.
