@@ -305,12 +305,12 @@ func (cn *conn) readColumns(n int) ([]column, error) {
 			return nil, err
 		}
 		col := &cols[i]
-		p.ReadLCString()               // catalog
-		p.ReadLCString()               // schema
-		p.ReadLCString()               // table
-		p.ReadLCString()               // org_table
+		p.SkipLCBytes()                // catalog
+		p.SkipLCBytes()                // schema
+		p.SkipLCBytes()                // table
+		p.SkipLCBytes()                // org_table
 		col.name, _ = p.ReadLCString() // name
-		p.ReadLCString()               // org_name
+		p.SkipLCBytes()                // org_name
 		p.ReadLCUint64()               // 0x0c
 		col.charset = p.ReadUint16()
 		col.length = p.ReadUint32()

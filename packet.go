@@ -145,6 +145,11 @@ func (p *packet) ReadOK() (rowsAffected, lastInsertId int64, warnings uint16) {
 	return int64(rows), int64(last), warnings
 }
 
+func (p *packet) SkipLCBytes() {
+	n, _ := p.ReadLCUint64()
+	p.Next(int(n))
+}
+
 func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
 	buf := p.Bytes()
 	size := len(buf) - 4
