@@ -312,7 +312,7 @@ func (p *packet) ReadValue(coltype byte, flags uint16) (v interface{}, err error
 		if flags&UNSIGNED_FLAG == 0 {
 			v = int32(p.ReadUint24()<<8) >> 8 // sign extend to 32 bit
 		} else {
-			v = uint32(p.ReadUint24()<<8) >> 8 // sign extend to 32 bit
+			v = p.ReadUint24()
 		}
 
 	case MYSQL_TYPE_LONGLONG:
