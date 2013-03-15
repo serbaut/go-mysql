@@ -426,7 +426,7 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 	case ERR:
 		return nil, p.ReadErr()
 	default:
-		return nil, fmt.Errorf("expected OK or EOF, got %v", p.FirstByte())
+		return nil, fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
 	}
 	return st, nil
 }
