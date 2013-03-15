@@ -83,7 +83,7 @@ func (db *DB) tearDown() {
 	}
 }
 
-// q repaces ? parameters if needed
+// q replaces ? parameters if needed
 func (db *DB) q(sql string) string {
 	switch db.dialect {
 	case POSTGRESQL: // repace with $1, $2, ..
