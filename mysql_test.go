@@ -85,10 +85,10 @@ func TestTypes(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, err := tx.Exec("drop table if exists test"); err != nil {
+			if _, err := tx.Exec("drop table if exists gotest"); err != nil {
 				t.Fatal(err)
 			}
-			if _, err := tx.Exec(fmt.Sprintf("create temporary table test (null1 int, x %s, null2 int)", tt.def)); err != nil {
+			if _, err := tx.Exec(fmt.Sprintf("create temporary table gotest (null1 int, x %s, null2 int)", tt.def)); err != nil {
 				t.Fatal(err)
 			}
 
@@ -96,25 +96,25 @@ func TestTypes(t *testing.T) {
 
 			switch mode {
 			case "string":
-				if _, err = tx.Exec(fmt.Sprintf("insert into test values (null, %s, null)", tt.sval)); err != nil {
+				if _, err = tx.Exec(fmt.Sprintf("insert into gotest values (null, %s, null)", tt.sval)); err != nil {
 					t.Fatal(err)
 				}
-				if r, err = tx.Query("select * from test"); err != nil {
+				if r, err = tx.Query("select * from gotest"); err != nil {
 					t.Fatal(err)
 				}
 			case "arg":
-				if _, err = tx.Exec("insert into test values (?, ?, ?)", nil, tt.val, nil); err != nil {
+				if _, err = tx.Exec("insert into gotest values (?, ?, ?)", nil, tt.val, nil); err != nil {
 					t.Fatal(err)
 				}
-				if r, err = tx.Query("select * from test"); err != nil {
+				if r, err = tx.Query("select * from gotest"); err != nil {
 					t.Fatal(err)
 				}
 			case "stmt":
 				var st1, st2 *sql.Stmt
-				if st1, err = tx.Prepare("insert into test values (?, ?, ?)"); err != nil {
+				if st1, err = tx.Prepare("insert into gotest values (?, ?, ?)"); err != nil {
 					t.Fatal(err)
 				}
-				if st2, err = tx.Prepare("select * from test"); err != nil {
+				if st2, err = tx.Prepare("select * from gotest"); err != nil {
 					t.Fatal(err)
 				}
 				if _, err = st1.Exec(nil, tt.val, nil); err != nil {
@@ -221,14 +221,14 @@ func TestLoadData(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	f.WriteString("1\tfoo\n")
+	f.WriteString("1\ttest\n")
 	f.Close()
 	defer os.Remove(f.Name())
 
-	if _, err = db.Exec("create temporary table foo (id int, name varchar(255))"); err != nil {
+	if _, err = db.Exec("create temporary table gotest (id int, name varchar(255))"); err != nil {
 		t.Fatal(err)
 	}
-	if _, err = db.Exec(fmt.Sprintf("load data local infile '%s' into table foo", f.Name())); err != nil {
+	if _, err = db.Exec(fmt.Sprintf("load data local infile '%s' into table gotest", f.Name())); err != nil {
 		t.Fatal(err)
 	}
 }
