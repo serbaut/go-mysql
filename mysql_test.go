@@ -16,11 +16,10 @@ import (
 )
 
 const (
-	dsn1 = "mysql://gopher1@localhost"
-	dsn2 = "mysql://gopher2:secret@localhost:3306/test"
-	dsn3 = "mysqls://gopher1@localhost?ssl-insecure-skip-verify"
-	dsn4 = "mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock"
-	dsn5 = "mysql://gopher2:secret@localhost/test?strict"
+	dsn1 = "mysql://gopher1@localhost?strict"
+	dsn2 = "mysql://gopher2:secret@localhost:3306/test?strict"
+	dsn3 = "mysqls://gopher1@localhost?strict&ssl-insecure-skip-verify"
+	dsn4 = "mysql://gopher2:secret@(unix)/test?strict&socket=/var/lib/mysql/mysql.sock"
 )
 
 func TestTypes(t *testing.T) {
@@ -211,7 +210,7 @@ func TestTypes(t *testing.T) {
 }
 
 func TestLoadData(t *testing.T) {
-	db, err := sql.Open("mysql", dsn2 + "?allow-insecure-local-infile")
+	db, err := sql.Open("mysql", dsn2 + "&allow-insecure-local-infile")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -305,7 +304,7 @@ func TestUnixSocket(t *testing.T) {
 }
 
 func TestStrict(t *testing.T) {
-	db, err := sql.Open("mysql", dsn5)
+	db, err := sql.Open("mysql", dsn2)
 	if err != nil {
 		t.Fatal(err)
 	}
