@@ -7,12 +7,12 @@ import (
 	"bytes"
 	"database/sql"
 	"fmt"
+	"io/ioutil"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
 	"time"
-	"os"
-	"io/ioutil"
 )
 
 const (
@@ -210,7 +210,7 @@ func TestTypes(t *testing.T) {
 }
 
 func TestLoadData(t *testing.T) {
-	db, err := sql.Open("mysql", dsn2 + "&allow-insecure-local-infile")
+	db, err := sql.Open("mysql", dsn2+"&allow-insecure-local-infile")
 	if err != nil {
 		t.Fatal(err)
 	}
