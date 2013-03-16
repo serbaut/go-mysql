@@ -21,6 +21,13 @@ Parameters
 * socket : unix domain socket (default /var/run/mysqld/mysqld.sock)
 * debug : log requests and MySQL warnings to stdout
 
+Examples
+
+    mysql://gopher1@localhost
+    mysql://gopher2:secret@localhost:3306/test?debug
+    mysqls://gopher1@localhost?ssl-insecure-skip-verify
+    mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock
+
 ## Support for
 
 * longtext and longblob > 16MB
