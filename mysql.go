@@ -13,10 +13,10 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"io"
-	"os"
 	"log"
 	"net"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 )
@@ -38,8 +38,9 @@ type conn struct {
 	netconn            net.Conn
 	bufrd              *bufio.Reader
 	tls                *tls.Config
+	socket             string
 	debug              bool
-	allowLocalInfile bool
+	allowLocalInfile   bool
 }
 
 type stmt struct {
@@ -92,7 +93,7 @@ func connect(dsn string) (*conn, error) {
 		return nil, fmt.Errorf("invalid dsn: %s", dsn)
 	}
 
-	cn := &conn{host: "localhost", port: 3306, user: "root"}
+	cn := &conn{host: "localhost", port: 3306, user: "root", socket: "/var/run/mysqld/mysqld.sock"}
 
 	switch u.Scheme {
 	case "mysql":
@@ -102,7 +103,7 @@ func connect(dsn string) (*conn, error) {
 		return nil, fmt.Errorf("invalid scheme: %s", dsn)
 	}
 
-	for k := range u.Query() {
+	for k, v := range u.Query() {
 		switch k {
 		case "debug":
 			cn.debug = true
@@ -112,6 +113,10 @@ func connect(dsn string) (*conn, error) {
 			}
 		case "insecure-local-infile":
 			cn.allowLocalInfile = true
+		case "socket":
+			cn.socket = v[0]
+		default:
+			return nil, fmt.Errorf("invalid parameter: %s", k)
 		}
 	}
 
@@ -139,7 +144,11 @@ func connect(dsn string) (*conn, error) {
 		cn.db = path[1]
 	}
 
-	cn.netconn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", cn.host, cn.port))
+	if u.Host == "(unix)" {
+		cn.netconn, err = net.Dial("unix", cn.socket)
+	} else {
+		cn.netconn, err = net.Dial("tcp", fmt.Sprintf("%s:%d", cn.host, cn.port))
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -445,7 +454,7 @@ func (cn *conn) sendLocalFile(r *result, fn string) error {
 	if !cn.allowLocalInfile {
 		return fmt.Errorf("LOAD DATA LOCAL is not allowed (enable with DSN paramter ?insecure-local-infile)")
 	}
-	f , err := os.Open(fn)
+	f, err := os.Open(fn)
 	if err != nil {
 		return err
 	}
@@ -488,7 +497,7 @@ func (cn *conn) sendLocalFile(r *result, fn string) error {
 	default:
 		return fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
 	}
-		
+
 	return nil
 }
 

@@ -19,6 +19,7 @@ const (
 	dsn1 = "mysql://gopher1@localhost"
 	dsn2 = "mysql://gopher2:secret@localhost:3306/test"
 	dsn3 = "mysqls://gopher1@localhost?ssl-insecure-skip-verify"
+	dsn4 = "mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock"
 )
 
 func TestTypes(t *testing.T) {
@@ -283,6 +284,22 @@ func TestGoroutines(t *testing.T) {
 	}
 	if got, want := sum, N*(N+1)/2; got != want {
 		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
+func TestUnixSocket(t *testing.T) {
+	if _, err := os.Stat("/var/run/mysqld/mysqld.sock"); err != nil {
+		t.Log("skipping unix domain socket test")
+		return
+	}
+	db, err := sql.Open("mysql", dsn4)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err = db.Exec("select 1"); err != nil {
+		t.Fatal(err)
 	}
 }
 
