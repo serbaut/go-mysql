@@ -39,6 +39,7 @@ type conn struct {
 	bufrd              *bufio.Reader
 	tls                *tls.Config
 	socket             string
+	strict             bool
 	debug              bool
 	allowLocalInfile   bool
 }
@@ -115,6 +116,8 @@ func connect(dsn string) (*conn, error) {
 			cn.allowLocalInfile = true
 		case "socket":
 			cn.socket = v[0]
+		case "strict":
+			cn.strict = true
 		default:
 			return nil, fmt.Errorf("invalid parameter: %s", k)
 		}
@@ -622,7 +625,35 @@ func (st *stmt) Close() error {
 func (r *result) ReadOK(p *packet) error {
 	r.rowsAffected, r.lastInsertId, r.warnings = p.ReadOK()
 	r.closed = true
-	r.cn.logWarnings(r.warnings)
+	return r.ReadWarnings()
+}
+
+func (r *result) ReadWarnings() error {
+	if r.warnings > 0 && (r.cn.strict || r.cn.debug) {
+		w, err := r.cn.query("show warnings")
+		if err != nil {
+			return err
+		}
+		v := make([]driver.Value, 3)
+		for {
+			switch err := w.Next(v); err {
+			case nil:
+				if r.cn.debug {
+					log.Printf("%s %s %s", v[0], v[1], v[2])
+				}
+				if r.cn.strict {
+					if string(v[0].([]byte)) != "Note" {
+						w.Close()
+						return fmt.Errorf("%s %s %s", v[0], v[1], v[2])
+					}
+				}
+			case io.EOF:
+				return nil
+			default:
+				return err
+			}
+		}
+	}
 	return nil
 }
 
@@ -660,7 +691,6 @@ func (r *result) Next(dest []driver.Value) (err error) {
 	if r.closed {
 		return io.EOF
 	}
-
 	var p packet
 	if _, err = p.ReadFrom(r.cn.bufrd); err != nil {
 		return err
@@ -672,8 +702,12 @@ func (r *result) Next(dest []driver.Value) (err error) {
 	case p.FirstByte() == EOF && p.Len() <= 8: // can be LC integer
 		r.warnings, r.status = p.ReadEOF()
 		r.closed = true
-		r.cn.logWarnings(r.warnings)
-		return io.EOF
+		switch err := r.ReadWarnings(); err {
+		case nil:
+			return io.EOF
+		default:
+			return err
+		}
 	default:
 		if r.binary {
 			if h := p.ReadUint8(); h != 0 {

@@ -16,6 +16,7 @@ Requires Go >= 1.0.3 and MySQL >= 4.1
 
 Parameters
 
+* `strict` : treat MySQL warnings as errors
 * `allow-insecure-local-infile` : allow `LOAD DATA LOCAL INFILE`
 * `ssl-insecure-skip-verify` : skip SSL certificate verification
 * `socket` : unix domain socket (default `/var/run/mysqld/mysqld.sock`)
@@ -24,7 +25,7 @@ Parameters
 Examples
 
     mysql://gopher1@localhost
-    mysql://gopher2:secret@localhost:3306/test?debug
+    mysql://gopher2:secret@localhost:3306/test?strict&debug
     mysqls://gopher1@localhost?ssl-insecure-skip-verify
     mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock
 

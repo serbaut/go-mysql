@@ -20,6 +20,7 @@ const (
 	dsn2 = "mysql://gopher2:secret@localhost:3306/test"
 	dsn3 = "mysqls://gopher1@localhost?ssl-insecure-skip-verify"
 	dsn4 = "mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock"
+	dsn5 = "mysql://gopher2:secret@localhost/test?strict"
 )
 
 func TestTypes(t *testing.T) {
@@ -300,6 +301,21 @@ func TestUnixSocket(t *testing.T) {
 
 	if _, err = db.Exec("select 1"); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestStrict(t *testing.T) {
+	db, err := sql.Open("mysql", dsn5)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("drop table if exists gotest"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("select 1 + 'foo'"); err == nil {
+		t.Fatal("expected error")
 	}
 }
 
