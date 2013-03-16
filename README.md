@@ -2,7 +2,7 @@
 
 A pure Go MySQL driver for database/sql.
 
-Requires Go >= 1.0.3 and MySQL >= 5.0.
+Requires Go >= 1.0.3 and MySQL >= 4.1
 
 ## Data Source Name Format
 
