@@ -11,6 +11,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+	"os"
+	"io/ioutil"
 )
 
 const (
@@ -203,6 +205,29 @@ func TestTypes(t *testing.T) {
 				t.Fatal(err)
 			}
 		}
+	}
+}
+
+func TestLoadData(t *testing.T) {
+	db, err := sql.Open("mysql", dsn2 + "?insecure-local-infile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	f, err := ioutil.TempFile("", "go-mysql")
+	if err != nil {
+		t.Fatal(err)
+	}
+	f.WriteString("1\tfoo\n")
+	f.Close()
+	defer os.Remove(f.Name())
+
+	if _, err = db.Exec("create temporary table foo (id int, name varchar(255))"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = db.Exec(fmt.Sprintf("load data local infile '%s' into table foo", f.Name())); err != nil {
+		t.Fatal(err)
 	}
 }
 

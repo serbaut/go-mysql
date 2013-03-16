@@ -14,8 +14,8 @@ type packet struct {
 	bytes.Buffer
 }
 
-func newPacket(seq byte) (p packet) {
-	p.Write([]byte{0, 0, 0, seq})
+func newPacket(seq int) (p packet) {
+	p.Write([]byte{0, 0, 0, byte(seq)})
 	return p
 }
 

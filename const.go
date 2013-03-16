@@ -123,7 +123,8 @@ const MAX_DATA_CHUNK = 1 << 19
 const CHARSET_UTF8_GENERAL_CI = 33
 
 const (
-	OK  = 0x00
-	EOF = 0xfe
-	ERR = 0xff
+	OK           = 0x00
+	EOF          = 0xfe
+	LOCAL_INFILE = 0xfb
+	ERR          = 0xff
 )

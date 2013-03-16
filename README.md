@@ -13,13 +13,19 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 * password defaults to blank
 * host defaults to localhost
 * port defaults to 3306
-* use query paramteter ssl-insecure-skip-verify to skip SSL certificate verification
-* use query paramteter debug to log request and MySQL warnings to stdout
 
-## Features
+Query parameters
 
-* longtext and longblob > 16MB support
-* SSL support
+* insecure-local-infile : allow LOAD DATA LOCAL INFILE
+* ssl-insecure-skip-verify : skip SSL certificate verification
+* debug : log requests and MySQL warnings to stdout
+
+
+## Support for
+
+* longtext and longblob > 16MB
+* LOAD DATA LOCAL INFILE
+* SSL
 
 ## Installation
 
@@ -43,4 +49,3 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
     mysql@localhost> grant all on test.* to gopher2@localhost identified by 'secret';
 
     $ go test
-

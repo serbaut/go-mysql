@@ -13,6 +13,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"io"
+	"os"
 	"log"
 	"net"
 	"net/url"
@@ -38,6 +39,7 @@ type conn struct {
 	bufrd              *bufio.Reader
 	tls                *tls.Config
 	debug              bool
+	allowLocalInfile bool
 }
 
 type stmt struct {
@@ -108,6 +110,8 @@ func connect(dsn string) (*conn, error) {
 			if cn.tls != nil {
 				cn.tls.InsecureSkipVerify = true
 			}
+		case "insecure-local-infile":
+			cn.allowLocalInfile = true
 		}
 	}
 
@@ -157,7 +161,7 @@ func (cn *conn) hello() error {
 	if err != nil {
 		return err
 	}
-	seq := byte(1)
+	seq := 1
 	if cn.tls != nil {
 		if cn.serverCapabilities&CLIENT_SSL == 0 {
 			return fmt.Errorf("server does not support SSL")
@@ -212,9 +216,9 @@ func (cn *conn) readHello() ([]byte, error) {
 	return challange, nil
 }
 
-func (cn *conn) writeHello(seq byte, challange []byte, flags uint32) error {
+func (cn *conn) writeHello(seq int, challange []byte, flags uint32) error {
 	p := newPacket(seq)
-	flags |= CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION
+	flags |= CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION | CLIENT_LOCAL_FILES
 	if len(cn.db) > 0 {
 		flags |= CLIENT_CONNECT_WITH_DB
 	}
@@ -375,11 +379,17 @@ func (cn *conn) query(query string) (r *result, err error) {
 
 	switch p.FirstByte() {
 	case OK:
-		r.closed = true
-		r.rowsAffected, r.lastInsertId, r.warnings = p.ReadOK()
-		r.cn.logWarnings(r.warnings)
+		if err = r.ReadOK(&p); err != nil {
+			return nil, err
+		}
 	case ERR:
 		return nil, p.ReadErr()
+	case LOCAL_INFILE:
+		p.ReadUint8()
+		fn := string(p.Bytes())
+		if err := cn.sendLocalFile(r, fn); err != nil {
+			return nil, err
+		}
 	default:
 		n, _ := p.ReadLCUint64()
 		if r.columns, err = cn.readColumns(int(n)); err != nil {
@@ -429,6 +439,57 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 		return nil, fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
 	}
 	return st, nil
+}
+
+func (cn *conn) sendLocalFile(r *result, fn string) error {
+	if !cn.allowLocalInfile {
+		return fmt.Errorf("LOAD DATA LOCAL is not allowed (enable with DSN paramter ?insecure-local-infile)")
+	}
+	f , err := os.Open(fn)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	seq := 2
+	buf := make([]byte, MAX_DATA_CHUNK)
+	for {
+		n, err := f.Read(buf)
+		if err != nil && err != io.EOF {
+			return err
+		}
+		if n > 0 {
+			p := newPacket(seq)
+			p.Write(buf[:n])
+			if _, err := p.WriteTo(cn.netconn); err != nil {
+				return err
+			}
+			seq += 1
+		}
+		if err == io.EOF {
+			break
+		}
+	}
+	p := newPacket(seq)
+	if _, err = p.WriteTo(cn.netconn); err != nil {
+		return err
+	}
+
+	if _, err = p.ReadFrom(cn.bufrd); err != nil {
+		return err
+	}
+	switch p.FirstByte() {
+	case OK:
+		if err = r.ReadOK(&p); err != nil {
+			return err
+		}
+	case ERR:
+		return p.ReadErr()
+	default:
+		return fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
+	}
+		
+	return nil
 }
 
 func (cn *conn) logWarnings(warnings uint16) {
@@ -521,9 +582,9 @@ func (st *stmt) query(args []driver.Value) (r *result, err error) {
 
 	switch p.FirstByte() {
 	case OK:
-		r.closed = true
-		r.rowsAffected, r.lastInsertId, r.warnings = p.ReadOK()
-		st.cn.logWarnings(r.warnings)
+		if err = r.ReadOK(&p); err != nil {
+			return nil, err
+		}
 	case ERR:
 		return nil, p.ReadErr()
 	default:
@@ -546,6 +607,13 @@ func (st *stmt) Close() error {
 	if _, err := p.WriteTo(st.cn.netconn); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r *result) ReadOK(p *packet) error {
+	r.rowsAffected, r.lastInsertId, r.warnings = p.ReadOK()
+	r.closed = true
+	r.cn.logWarnings(r.warnings)
 	return nil
 }
 
