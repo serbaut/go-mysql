@@ -14,7 +14,7 @@ Requires Go >= 1.0.3 and MySQL >= 5.0.
 * host defaults to localhost (use '(unix)' for unix domain sockets)
 * port defaults to 3306
 
-Query parameters
+Parameters
 
 * insecure-local-infile : allow LOAD DATA LOCAL INFILE
 * ssl-insecure-skip-verify : skip SSL certificate verification
