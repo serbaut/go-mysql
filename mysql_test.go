@@ -210,7 +210,7 @@ func TestTypes(t *testing.T) {
 }
 
 func TestLoadData(t *testing.T) {
-	db, err := sql.Open("mysql", dsn2 + "?insecure-local-infile")
+	db, err := sql.Open("mysql", dsn2 + "?allow-insecure-local-infile")
 	if err != nil {
 		t.Fatal(err)
 	}

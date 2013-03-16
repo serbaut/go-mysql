@@ -111,7 +111,7 @@ func connect(dsn string) (*conn, error) {
 			if cn.tls != nil {
 				cn.tls.InsecureSkipVerify = true
 			}
-		case "insecure-local-infile":
+		case "allow-insecure-local-infile":
 			cn.allowLocalInfile = true
 		case "socket":
 			cn.socket = v[0]
