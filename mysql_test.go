@@ -288,7 +288,7 @@ func TestGoroutines(t *testing.T) {
 }
 
 func TestUnixSocket(t *testing.T) {
-	if _, err := os.Stat("/var/run/mysqld/mysqld.sock"); err != nil {
+	if _, err := os.Stat("/var/lib/mysql/mysql.sock"); err != nil {
 		t.Log("skipping unix domain socket test")
 		return
 	}
