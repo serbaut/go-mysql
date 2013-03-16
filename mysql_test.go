@@ -211,6 +211,8 @@ func TestSSL(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	defer db.Close()
+
 	var n, s string
 	if err := db.QueryRow("show variables like 'have_ssl'").Scan(&n, &s); err != nil {
 		t.Fatal(err)
@@ -231,7 +233,6 @@ func TestSSL(t *testing.T) {
 	if got, want := s, "TLSv1"; got != want {
 		t.Errorf("got %v, want %v", got, want)
 	}
-	defer db.Close()
 }
 
 func TestGoroutines(t *testing.T) {
@@ -240,6 +241,7 @@ func TestGoroutines(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
+
 	const N = 100
 	c := make(chan int, N)
 	for i := 0; i < N; i++ {
