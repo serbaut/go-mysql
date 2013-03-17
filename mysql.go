@@ -48,11 +48,9 @@ type stmt struct {
 	cn         *conn
 	qs         string
 	stmtId     uint32
-	numColumns int
-	numParams  int
-	warnings   uint16
 	params     []column
 	columns    []column
+	warnings   uint16
 }
 
 type column struct {
@@ -432,17 +430,17 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 	st = &stmt{cn: cn, qs: query}
 	switch p.FirstByte() {
 	case OK:
-		p.ReadUint8()
+		p.ReadUint8()			// OK
 		st.stmtId = p.ReadUint32()
-		st.numColumns = int(p.ReadUint16())
-		st.numParams = int(p.ReadUint16())
-		p.ReadUint8()
+		numColumns := int(p.ReadUint16())
+		numParams := int(p.ReadUint16())
+		p.ReadUint8()			// filler
 		st.warnings = p.ReadUint16()
 		st.cn.logWarnings(st.warnings)
-		if st.params, err = cn.readColumns(st.numParams); err != nil {
+		if st.params, err = cn.readColumns(numParams); err != nil {
 			return nil, err
 		}
-		if st.columns, err = cn.readColumns(st.numColumns); err != nil {
+		if st.columns, err = cn.readColumns(numColumns); err != nil {
 			return nil, err
 		}
 	case ERR:
@@ -455,7 +453,7 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 
 func (cn *conn) sendLocalFile(r *result, fn string) error {
 	if !cn.allowLocalInfile {
-		return fmt.Errorf("LOAD DATA LOCAL is not allowed (enable with DSN paramter ?insecure-local-infile)")
+		return fmt.Errorf("client does not allow LOAD DATA LOCAL")
 	}
 	f, err := os.Open(fn)
 	if err != nil {
@@ -511,6 +509,9 @@ func (cn *conn) logWarnings(warnings uint16) {
 }
 
 func (st *stmt) Exec(args []driver.Value) (driver.Result, error) {
+	if st.cn.debug {
+		log.Println("exec:", st.qs, args)
+	}
 	return st.exec(args)
 }
 

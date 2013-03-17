@@ -316,6 +316,11 @@ func TestStrict(t *testing.T) {
 	if _, err = db.Exec("select 1 + 'foo'"); err == nil {
 		t.Fatal("expected error")
 	}
+
+	if _, err = db.Exec("select ? + ?", 1, "foo"); err == nil {
+		// mysql doesnt seem to generate warnings for this?!
+		//t.Fatal("expected error")
+	}
 }
 
 func TestSuite(t *testing.T) {
