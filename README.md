@@ -29,12 +29,6 @@ Examples
     mysqls://gopher1@localhost?ssl-insecure-skip-verify
     mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock
 
-## Support for
-
-* longtext and longblob > 16MB
-* LOAD DATA LOCAL INFILE
-* SSL
-
 ## Installation
 
     go get github.com/serbaut/go-mysql
