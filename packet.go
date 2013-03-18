@@ -253,14 +253,19 @@ func (p *packet) WriteArgs(args []driver.Value) error {
 			}
 		case time.Time:
 			t = t.UTC()
-			p.WriteUint16(MYSQL_TYPE_DATETIME)
-			v.WriteByte(7)
-			v.WriteUint16(uint16(t.Year()))
-			v.WriteByte(byte(t.Month()))
-			v.WriteByte(byte(t.Day()))
-			v.WriteByte(byte(t.Hour()))
-			v.WriteByte(byte(t.Minute()))
-			v.WriteByte(byte(t.Second()))
+			if t.IsZero() {
+				p.WriteUint16(MYSQL_TYPE_DATETIME)
+				v.WriteByte(0)
+			} else {
+				p.WriteUint16(MYSQL_TYPE_DATETIME)
+				v.WriteByte(7)
+				v.WriteUint16(uint16(t.Year()))
+				v.WriteByte(byte(t.Month()))
+				v.WriteByte(byte(t.Day()))
+				v.WriteByte(byte(t.Hour()))
+				v.WriteByte(byte(t.Minute()))
+				v.WriteByte(byte(t.Second()))
+			}
 		case time.Duration:
 			p.WriteUint16(MYSQL_TYPE_TIME)
 			v.WriteByte(8)

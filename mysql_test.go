@@ -314,7 +314,7 @@ func TestStrict(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err = db.Exec("drop table if exists gotest"); err != nil {
+	if _, err = db.Exec("drop table if exists doesnotexist"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -327,7 +327,7 @@ func TestStrict(t *testing.T) {
 		//t.Fatal("expected error")
 	}
 
-	if _, err = db.Exec("create table gotest (name varchar(2) )"); err != nil {
+	if _, err = db.Exec("create temporary table gotest (name varchar(2) )"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -346,10 +346,6 @@ func TestNullTime(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-
-	if _, err = db.Exec("drop table if exists gotest"); err != nil {
-		t.Fatal(err)
-	}
 
 	if _, err = db.Exec("create temporary table gotest (ts datetime, d date)"); err != nil {
 		t.Fatal(err)
@@ -391,10 +387,18 @@ func TestNullTime(t *testing.T) {
 	} else {
 		checkZero(r)
 	}
-	if r, err := db.Query("select * from gotest where ts <> ?", time.Now()); err != nil {
+	if r, err := db.Query("select * from gotest where ?", true); err != nil {
 		t.Fatal(err)
 	} else {
 		checkZero(r)
+	}
+	
+	var n int
+	if err := db.QueryRow("select count(*) from gotest where ts = ? and d = ?", time.Time{}, time.Time{}).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 2 {
+		t.Fatalf("got %v, want %v zero dates", n, 2)
 	}
 }
 
