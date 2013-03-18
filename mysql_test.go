@@ -60,11 +60,16 @@ func TestTypes(t *testing.T) {
 		{"bool", "true", true},
 		{"bit(10)", "256", []byte{1, 0}},
 		{"timestamp", "'2001-02-03 01:02:03'", time.Date(2001, 2, 3, 1, 2, 3, 0, time.UTC)},
+		{"datetime", "NULL", time.Time{}},
+		{"datetime", "'0000-00-00 00:00:00'", time.Time{}},
 		{"datetime", "'1111-02-03 01:02:03'", time.Date(1111, 2, 3, 1, 2, 3, 0, time.UTC)},
 		{"datetime", "'2001-02-03 00:02:03'", time.Date(2001, 2, 3, 1, 2, 3, 0, time.FixedZone("", +3600))},
 		{"date", "'2222-02-03'", time.Date(2222, 2, 3, 0, 0, 0, 0, time.UTC)},
+		{"date", "NULL", time.Time{}},
+		{"date", "'0000-00-00'", time.Time{}},
 		// pending support for time.Duration in database/sql:
 		//{"time", "'-100:01:59'", time.Duration(-(100*time.Hour + 1*time.Minute + 59*time.Second))},
+		//{"time", "NULL", time.Duration(0)},
 		{"enum('a', 'b')", "'b'", "b"},
 		{"set('a', 'b')", "'b'", "b"},
 		{"binary(5)", "'abc'", []byte{'a', 'b', 'c', 0, 0}},
@@ -332,6 +337,64 @@ func TestStrict(t *testing.T) {
 
 	if _, err = db.Exec("insert into gotest (name) values (?)", "overflow"); err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestNullTime(t *testing.T) {
+	db, err := sql.Open("mysql", dsn2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err = db.Exec("drop table if exists gotest"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("create temporary table gotest (ts datetime, d date)"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("insert into gotest set ts=null, d=null"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("insert into gotest set ts='0000-00-00 00:00:00', d='0000-00-00'"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("insert into gotest set ts=?, d=?", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err = db.Exec("insert into gotest set ts=?, d=?", time.Time{}, time.Time{}); err != nil {
+		t.Fatal(err)
+	}
+
+	checkZero := func(r *sql.Rows) {
+		for r.Next() {
+			var ts, d time.Time
+			if err := r.Scan(&ts, &d); err != nil {
+				t.Fatal(err)
+			}
+			if !ts.IsZero() {
+				t.Fatalf("got %v, expected %v", ts, time.Time{})
+			}
+		}
+		if err := r.Err(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if r, err := db.Query("select * from gotest"); err != nil {
+		t.Fatal(err)
+	} else {
+		checkZero(r)
+	}
+	if r, err := db.Query("select * from gotest where ts <> ?", time.Now()); err != nil {
+		t.Fatal(err)
+	} else {
+		checkZero(r)
 	}
 }
 

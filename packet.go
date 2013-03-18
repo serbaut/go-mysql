@@ -285,7 +285,18 @@ func (p *packet) WriteArgs(args []driver.Value) error {
 	return err
 }
 
-func (p *packet) ReadValue(coltype byte, flags uint16) (v interface{}, err error) {
+func (p *packet) ReadValue(coltype byte, flags uint16, isnull bool) (v interface{}, err error) {
+	if isnull {
+		switch coltype {
+		case MYSQL_TYPE_TIMESTAMP, MYSQL_TYPE_DATETIME, MYSQL_TYPE_DATE, MYSQL_TYPE_NEWDATE:
+			return time.Time{}, nil
+		case MYSQL_TYPE_TIME:
+			return time.Duration(0), nil
+		default:
+			return nil, nil
+		}
+	}
+
 	switch coltype {
 	case MYSQL_TYPE_TINY:
 		if flags&UNSIGNED_FLAG == 0 {
@@ -344,6 +355,8 @@ func (p *packet) ReadValue(coltype byte, flags uint16) (v interface{}, err error
 				}
 			}
 			v = time.Date(y, m, d, hh, mm, ss, ns, time.UTC)
+		} else {
+			v = time.Time{}
 		}
 
 	case MYSQL_TYPE_TIME:
@@ -363,6 +376,8 @@ func (p *packet) ReadValue(coltype byte, flags uint16) (v interface{}, err error
 				ns = -ns
 			}
 			v = time.Duration(ns)
+		} else {
+			v = time.Duration(0)
 		}
 
 	case MYSQL_TYPE_STRING, MYSQL_TYPE_VARCHAR, MYSQL_TYPE_VAR_STRING,
@@ -381,22 +396,36 @@ func (p *packet) ReadValue(coltype byte, flags uint16) (v interface{}, err error
 
 func (p *packet) ReadTextValue(coltype byte, flags uint16) (v interface{}, err error) {
 	b, isnull := p.ReadLCBytes()
-	if isnull {
-		return nil, nil
-	}
+
 	switch coltype {
 	case MYSQL_TYPE_DATETIME, MYSQL_TYPE_TIMESTAMP:
-		v, err = time.Parse("2006-01-02 15:04:05", string(b))
-	case MYSQL_TYPE_DATE:
-		v, err = time.Parse("2006-01-02", string(b))
-	case MYSQL_TYPE_TIME:
-		t := strings.Split(string(b), ":")
-		if len(t) != 3 {
-			return nil, fmt.Errorf("invalid time: %s", b)
+		if isnull || bytes.Equal(b, []byte("0000-00-00 00:00:00")) {
+			return time.Time{}, nil
+		} else {
+			return time.Parse("2006-01-02 15:04:05", string(b))
 		}
-		v, err = time.ParseDuration(fmt.Sprintf("%sh%sm%ss", t[0], t[1], t[2]))
+	case MYSQL_TYPE_DATE:
+		if isnull || bytes.Equal(b, []byte("0000-00-00")) {
+			return time.Time{}, nil
+		} else {
+			return time.Parse("2006-01-02", string(b))
+		}
+	case MYSQL_TYPE_TIME:
+		if isnull {
+			return time.Duration(0), nil
+		} else {
+			t := strings.Split(string(b), ":")
+			if len(t) != 3 {
+				return nil, fmt.Errorf("invalid time: %s", b)
+			}
+			return time.ParseDuration(fmt.Sprintf("%sh%sm%ss", t[0], t[1], t[2]))
+		}
 	default:
-		v = b
+		if isnull {
+			return nil, nil
+		} else {
+			return b, nil
+		}
 	}
-	return v, err
+	panic("unreachable")
 }

@@ -19,6 +19,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 )
 
 type mysql struct{}
@@ -576,7 +577,11 @@ func (st *stmt) query(args []driver.Value) (r *result, err error) {
 	if len(args) > 0 {
 		nullMask := make([]bool, len(args))
 		for i, a := range args {
-			nullMask[i] = a == nil
+			if a == nil {
+				nullMask[i] = true
+			} else if t, ok := a.(time.Time); ok && t.IsZero() {
+				nullMask[i] = true
+			}
 		}
 		p.WriteMask(nullMask)
 		p.WriteByte(1)
@@ -717,12 +722,7 @@ func (r *result) Next(dest []driver.Value) (err error) {
 			nullMask := p.ReadMask(len(r.columns) + 2)
 			nullMask = nullMask[2:]
 			for i := range dest {
-				if !nullMask[i] {
-					dest[i], err = p.ReadValue(r.columns[i].coltype, r.columns[i].flags)
-					if err != nil {
-						return err
-					}
-				}
+				dest[i], err = p.ReadValue(r.columns[i].coltype, r.columns[i].flags, nullMask[i])
 			}
 		} else {
 			for i := range dest {
