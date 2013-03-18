@@ -718,6 +718,9 @@ func (r *result) Next(dest []driver.Value) (err error) {
 			nullMask = nullMask[2:]
 			for i := range dest {
 				dest[i], err = p.ReadValue(r.columns[i].coltype, r.columns[i].flags, nullMask[i])
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			for i := range dest {
