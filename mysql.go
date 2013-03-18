@@ -45,12 +45,12 @@ type conn struct {
 }
 
 type stmt struct {
-	cn         *conn
-	qs         string
-	stmtId     uint32
-	params     []column
-	columns    []column
-	warnings   uint16
+	cn       *conn
+	qs       string
+	stmtId   uint32
+	params   []column
+	columns  []column
+	warnings uint16
 }
 
 type column struct {
@@ -430,11 +430,11 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 	st = &stmt{cn: cn, qs: query}
 	switch p.FirstByte() {
 	case OK:
-		p.ReadUint8()			// OK
+		p.ReadUint8() // OK
 		st.stmtId = p.ReadUint32()
 		numColumns := int(p.ReadUint16())
 		numParams := int(p.ReadUint16())
-		p.ReadUint8()			// filler
+		p.ReadUint8() // filler
 		st.warnings = p.ReadUint16()
 		st.cn.logWarnings(st.warnings)
 		if st.params, err = cn.readColumns(numParams); err != nil {
