@@ -321,6 +321,18 @@ func TestStrict(t *testing.T) {
 		// mysql doesnt seem to generate warnings for this?!
 		//t.Fatal("expected error")
 	}
+
+	if _, err = db.Exec("create table gotest (name varchar(2) )"); err != nil {
+		t.Fatal(err)
+	}
+	
+	if _, err = db.Exec("insert into gotest (name) values ('overflow')"); err == nil {
+		t.Fatal("expected error")
+	}
+
+	if _, err = db.Exec("insert into gotest (name) values (?)", "overflow"); err == nil {
+		t.Fatal("expected error")
+	}
 }
 
 func TestSuite(t *testing.T) {
