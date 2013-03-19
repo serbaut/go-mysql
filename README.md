@@ -33,7 +33,7 @@ Examples
 
 ### About Time
 
-A zero time.Time argument to Query/Exec is treated as a mysql zero
+A zero time.Time argument to Query/Exec is treated as a MySQL zero
 datetime (0000-00-00 00:00:00). A MySQL zero datetime is returned as
 a Go zero time.
 

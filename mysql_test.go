@@ -392,7 +392,7 @@ func TestNullTime(t *testing.T) {
 	} else {
 		checkZero(r)
 	}
-	
+
 	var n int
 	if err := db.QueryRow("select count(*) from gotest where ts = ? and d = ?", time.Time{}, time.Time{}).Scan(&n); err != nil {
 		t.Fatal(err)
