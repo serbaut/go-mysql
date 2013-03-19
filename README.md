@@ -8,7 +8,7 @@ Requires Go >= 1.0.3 and MySQL >= 4.1
 
     mysql[s]://[user[:password]][@host][:port][/database][?param&...]
 
-* use `mysqls://` to establish an SSL connection
+* `mysqls://` establishes an SSL connection
 * `user` defaults to root
 * `password` defaults to blank
 * `host` defaults to localhost (use `(unix)` for unix domain sockets)
@@ -28,6 +28,14 @@ Examples
     mysql://gopher2:secret@localhost:3306/test?strict&debug
     mysqls://gopher1@localhost?ssl-insecure-skip-verify
     mysql://gopher2:secret@(unix)/test?socket=/var/lib/mysql/mysql.sock
+
+## Notes
+
+### About Time
+
+A zero time.Time argument to Query/Exec is treated as a mysql zero
+datetime (0000-00-00 00:00:00). A MySQL zero datetime is returned as
+a Go zero time.
 
 ## Installation
 
