@@ -196,7 +196,7 @@ func (p *packet) ReadMask(nbits int) (mask []bool) {
 	bytes := p.Next(int((nbits + 7) / 8))
 	mask = make([]bool, nbits)
 	for i := range mask {
-		mask[i] = (bytes[i/8]>>byte(i%8))&1 > 0
+		mask[i] = bytes[i/8]>>byte(i%8)&1 > 0
 	}
 	return mask
 }
@@ -205,7 +205,7 @@ func (p *packet) WriteMask(mask []bool) {
 	buf := make([]byte, (len(mask)+7)/8)
 	for i := range mask {
 		if mask[i] {
-			buf[i/8] |= (1 << byte(i&7))
+			buf[i/8] |= 1 << byte(i&7)
 		}
 	}
 	p.Write(buf)
