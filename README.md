@@ -34,8 +34,11 @@ Examples
 ### About Time
 
 A zero time.Time argument to Query/Exec is treated as a MySQL zero
-datetime (0000-00-00 00:00:00). A MySQL zero datetime is returned as
+timestamp (0000-00-00 00:00:00). A MySQL zero timestamp is returned as
 a Go zero time.
+
+Timestamps in MySQL are assumed to be in UTC. time.Time arguments are
+stored as UTC and returned as UTC.
 
 ## Installation
 
