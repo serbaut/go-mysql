@@ -47,7 +47,7 @@ func TestTypes(t *testing.T) {
 	}{
 		{"varchar(6)", "'abc\000'", "abc\000"},
 		{"char(6)", "'abc\000'", "abc\000"},
-		{"varchar(255) character set utf8", "'åäößα βγПривет мир'", "åäößα βγПривет мир"},
+		{"varchar(255) character set utf8", "'åäößαβγ \u65e5\u672c\u8a9e Привет мир'", "åäößαβγ \u65e5\u672c\u8a9e Привет мир"},
 		{"varchar(255) character set latin1", "'åäöß'", "åäöß"},
 		{"varchar(255) character set koi8r", "'Привет мир'", "Привет мир"},
 		{"tinyint", "127", int8(127)},
