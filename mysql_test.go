@@ -77,14 +77,14 @@ func TestTypes(t *testing.T) {
 		{"binary(5)", "'abc'", []byte{'a', 'b', 'c', 0, 0}},
 		{"blob", "'blob'", []byte("blob")},
 		{"text", "'text'", "text"},
-		{"varchar(8000)", "n/a", strings.Repeat(".", 8000)},
-		{"longblob", "n/a", bytes.Repeat([]byte{'.'}, blob_size)},
-		{"longtext", "n/a", strings.Repeat(".", blob_size)},
+		{"varchar(8000)", "'" + strings.Repeat(".", 8000) + "'", strings.Repeat(".", 8000)},
+		{"longblob", "#longblob", bytes.Repeat([]byte{'.'}, blob_size)},
+		{"longtext", "#longblob", strings.Repeat(".", blob_size)},
 	}
 
 	for _, tt := range typeTests {
 		for _, mode := range []string{"string", "arg", "stmt"} {
-			if mode == "string" && tt.sval == "n/a" {
+			if tt.sval == "#longblob" && (mode == "string" || testing.Short()) {
 				continue
 			}
 			tx, err := db.Begin()
