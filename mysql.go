@@ -26,6 +26,7 @@ type mysql struct{}
 type conn struct {
 	protocolVersion    byte
 	serverVersion      string
+	version            []byte
 	connId             uint32
 	serverCapabilities uint16
 	serverLanguage     uint8
@@ -201,7 +202,7 @@ func (cn *conn) hello() error {
 	return nil
 }
 
-func (cn *conn) readHello() ([]byte, error) {
+func (cn *conn) readHello() (challange []byte, err error) {
 	var p packet
 	if _, err := p.ReadFrom(cn.netconn); err != nil {
 		return nil, err
@@ -213,8 +214,20 @@ func (cn *conn) readHello() ([]byte, error) {
 	} else {
 		cn.serverVersion = s[:len(s)-1]
 	}
+
+	v := strings.Split(cn.serverVersion, ".")
+	cn.version = make([]byte, len(v))
+	for i := range v {
+		v, err := strconv.Atoi(v[i])
+		if err != nil {
+			log.Printf("warning: could not parse server version '%s'\n", cn.serverVersion)
+			break
+		}
+		cn.version[i] = byte(v)
+	}
+
 	cn.connId = p.ReadUint32()
-	challange := p.Next(8)
+	challange = p.Next(8)
 	p.Next(1)
 	cn.serverCapabilities = p.ReadUint16()
 	cn.serverLanguage = p.ReadUint8()
@@ -234,7 +247,11 @@ func (cn *conn) writeHello(seq int, challange []byte, flags uint32) error {
 	}
 	p.WriteUint32(flags)
 	p.WriteUint32(MAX_PACKET_SIZE)
-	p.WriteByte(CHARSET_UTF8_GENERAL_CI)
+	if bytes.Compare(cn.version, []byte{5, 5, 3}) >= 0 {
+		p.WriteByte(CHARSET_UTF8MB4)
+	} else {
+		p.WriteByte(CHARSET_UTF8)
+	}
 	p.Write(make([]byte, 23))
 
 	if flags&CLIENT_SSL == 0 {

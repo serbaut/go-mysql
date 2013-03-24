@@ -118,9 +118,15 @@ const (
 	CURSOR_TYPE_SCROLLABLE = 4
 )
 
-const MAX_PACKET_SIZE = 1<<24 - 1
-const MAX_DATA_CHUNK = 1 << 19
-const CHARSET_UTF8_GENERAL_CI = 33
+const (
+	MAX_PACKET_SIZE = 1<<24 - 1
+	MAX_DATA_CHUNK  = 1 << 19
+)
+
+const (
+	CHARSET_UTF8    = 33
+	CHARSET_UTF8MB4 = 45
+)
 
 const (
 	OK           = 0x00

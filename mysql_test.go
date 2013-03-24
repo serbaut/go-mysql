@@ -216,6 +216,35 @@ func TestTypes(t *testing.T) {
 	}
 }
 
+func TestUtf8mb4(t *testing.T) {
+	db, err := sql.Open("mysql", dsn2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	if _, err = db.Exec("create temporary table gotest (name varchar(255) character set utf8mb4)"); err != nil {
+		if err.Error() == "ERROR 1115 (42000): Unknown character set: 'utf8mb4'" {
+			t.Log("skipping utf8mb4 test, server does not support it")
+			return
+		}
+		t.Fatal(err)
+	}
+
+	want := "\U00101234"
+	var got string
+
+	if _, err = db.Exec("insert into gotest values (?)", want); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.QueryRow("select * from gotest where name = ?", want).Scan(&got); err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("got %v, want %v", got, want)
+	}
+}
+
 func TestLoadData(t *testing.T) {
 	db, err := sql.Open("mysql", dsn2+"&allow-insecure-local-infile")
 	if err != nil {
