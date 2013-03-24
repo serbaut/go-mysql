@@ -234,7 +234,7 @@ func TestUtf8mb4(t *testing.T) {
 	want := "\U00101234"
 	var got string
 
-	if _, err = db.Exec("insert into gotest values (?)", want); err != nil {
+	if _, err = db.Exec("insert into gotest values ('" + want + "')"); err != nil {
 		t.Fatal(err)
 	}
 	if err := db.QueryRow("select * from gotest where name = ?", want).Scan(&got); err != nil {
