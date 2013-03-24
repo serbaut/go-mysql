@@ -4,7 +4,9 @@ A pure Go MySQL driver for database/sql.
 
 Requires Go >= 1.0.3 and MySQL >= 4.1
 
-## Data Source Name Format
+## Data Source Name
+
+### Format
 
     mysql[s]://[user[:password]][@host][:port][/database][?param&...]
 
@@ -14,7 +16,7 @@ Requires Go >= 1.0.3 and MySQL >= 4.1
 * `host` defaults to localhost (use `(unix)` for unix domain sockets)
 * `port` defaults to 3306
 
-Parameters
+### Parameters
 
 * `strict` : treat MySQL warnings as errors
 * `allow-insecure-local-infile` : allow `LOAD DATA LOCAL INFILE`
@@ -22,7 +24,7 @@ Parameters
 * `socket` : unix domain socket (default `/var/run/mysqld/mysqld.sock`)
 * `debug` : log requests and MySQL warnings to the standard logger
 
-Examples
+### Examples
 
     mysql://gopher1@localhost
     mysql://gopher2:secret@localhost:3306/test?strict&debug
