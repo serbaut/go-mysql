@@ -453,7 +453,10 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 		numColumns := int(p.ReadUint16())
 		numParams := int(p.ReadUint16())
 		p.ReadUint8() // filler
-		st.warnings = p.ReadUint16()
+		if p.Len() >= 2 {
+			// mysql 4.1 does not always supply this field
+			st.warnings = p.ReadUint16()
+		}
 		st.cn.logWarnings(st.warnings)
 		if st.params, err = cn.readColumns(numParams); err != nil {
 			return nil, err
