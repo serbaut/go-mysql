@@ -218,7 +218,8 @@ func (cn *conn) readHello() (challange []byte, err error) {
 	v := strings.Split(cn.serverVersion, ".")
 	cn.version = make([]byte, len(v))
 	for i := range v {
-		v, err := strconv.Atoi(v[i])
+		s := strings.TrimFunc(v[i], func(r rune) bool { return r < '0' || r > '9' })
+		v, err := strconv.Atoi(s)
 		if err != nil {
 			log.Printf("warning: could not parse server version '%s'\n", cn.serverVersion)
 			break
