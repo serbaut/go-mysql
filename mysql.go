@@ -43,6 +43,7 @@ type conn struct {
 	strict             bool
 	debug              bool
 	allowLocalInfile   bool
+	charset            string
 }
 
 type stmt struct {
@@ -113,6 +114,8 @@ func connect(dsn string) (*conn, error) {
 			}
 		case "allow-insecure-local-infile":
 			cn.allowLocalInfile = true
+		case "charset":
+			cn.charset = v[0]
 		case "socket":
 			cn.socket = v[0]
 		case "strict":
@@ -163,6 +166,11 @@ func connect(dsn string) (*conn, error) {
 
 	if cn.debug {
 		log.Printf("connected: %s #%d (%s)\n", dsn, cn.connId, cn.serverVersion)
+	}
+	if cn.charset != "" {
+		if _, err := cn.Exec("SET NAMES " + cn.charset); err != nil {
+			return nil, err
+		}
 	}
 	return cn, nil
 }
