@@ -23,7 +23,7 @@ Requires Go >= 1.0.3 and MySQL >= 4.1
 * `ssl-insecure-skip-verify` : skip SSL certificate verification
 * `socket` : unix domain socket (default `/var/run/mysqld/mysqld.sock`)
 * `debug` : log requests and MySQL warnings to the standard logger
-* `charset` : set the mysql charset (`SET NAMES ...`).
+* `charset` : connection character set (read note below)
 
 ### Examples
 
@@ -42,6 +42,18 @@ a Go zero time.
 
 Timestamps in MySQL are assumed to be in UTC. time.Time arguments are
 stored as UTC and returned as UTC.
+
+### Character Set
+
+Strings are by default UTF-8 encoded in the MySQL connection; they are
+automatically converted by the MySQL server as needed.
+
+It is however common in legacy MySQL implementations (notably with php
+clients) to have incorrectly encoded strings in the database and you
+may need to trick the server not to translate to/from UTF-8. The
+`charset` parameter allows you to set the character set on a connection
+basis (a `SET NAMES` statement is executed on connect). Please review
+http://mysql.rjweb.org/doc.php/charcoll before using this option.
 
 ## Installation
 
