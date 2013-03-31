@@ -23,7 +23,7 @@ Requires Go >= 1.0.3 and MySQL >= 4.1
 * `ssl-insecure-skip-verify` : skip SSL certificate verification
 * `socket` : unix domain socket (default `/var/run/mysqld/mysqld.sock`)
 * `debug` : log requests and MySQL warnings to the standard logger
-* `charset` : connection character set (read note below)
+* `charset` : set connection character set (read note below)
 
 ### Examples
 
