@@ -168,7 +168,7 @@ func connect(dsn string) (*conn, error) {
 		log.Printf("connected: %s #%d (%s)\n", dsn, cn.connId, cn.serverVersion)
 	}
 	if cn.charset != "" {
-		if _, err := cn.Exec("SET NAMES " + cn.charset); err != nil {
+		if _, err := cn.Exec("SET NAMES "+cn.charset, nil); err != nil {
 			return nil, err
 		}
 	}
