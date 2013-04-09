@@ -223,22 +223,8 @@ func (cn *conn) readHello() (challange []byte, err error) {
 		cn.serverVersion = s[:len(s)-1]
 	}
 
-	serverVersion := cn.serverVersion
-	if i := strings.IndexRune(serverVersion, '-'); i >= 0 {
-		// Remove the suffix from the returned mysql version
-		// (on debian-based systems the mysql version looks like "5.1.63-0+squeeze1")
-		serverVersion = serverVersion[:i]
-	}
-	v := strings.Split(serverVersion, ".")
-	cn.version = make([]byte, len(v))
-	for i := range v {
-		s := strings.TrimFunc(v[i], func(r rune) bool { return r < '0' || r > '9' })
-		v, err := strconv.Atoi(s)
-		if err != nil {
-			log.Printf("warning: could not parse server version '%s'\n", cn.serverVersion)
-			break
-		}
-		cn.version[i] = byte(v)
+	if cn.version, err = parseVersion(cn.serverVersion); err != nil {
+		log.Printf("warning: could not parse server version '%s'\n", cn.serverVersion)
 	}
 
 	cn.connId = p.ReadUint32()
@@ -308,6 +294,18 @@ func passwordToken(password string, challange []byte) (token []byte) {
 	}
 
 	return token
+}
+
+func parseVersion(versionString string) (version []byte, err error) {
+	parts := strings.Split(versionString, "-")
+	for _, s := range strings.Split(parts[0], ".") {
+		v, err := strconv.Atoi(s)
+		if err != nil {
+			return nil, err
+		}
+		version = append(version, byte(v))
+	}
+	return version, nil
 }
 
 func (cn *conn) Begin() (driver.Tx, error) {

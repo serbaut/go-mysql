@@ -433,6 +433,27 @@ func TestNullTime(t *testing.T) {
 	}
 }
 
+func TestParseVersion(t *testing.T) {
+	tests := []struct {
+		s       string
+		version []byte
+	}{
+		{"5.1.67", []byte{5, 1, 67}},
+		{"5.1.63-0+squeeze1", []byte{5, 1, 63}},
+		{"4.1.22-standard", []byte{4, 1, 22}},
+	}
+
+	for _, v := range tests {
+		version, err := parseVersion(v.s)
+		if err != nil {
+			t.Error(err)
+		}
+		if got, want := version, v.version; !bytes.Equal(got, want) {
+			t.Errorf("%v: got %v, want %v", v.s, got, want)
+		}
+	}
+}
+
 func TestSuite(t *testing.T) {
 	db, err := sql.Open("mysql", dsn2)
 	if err != nil {
