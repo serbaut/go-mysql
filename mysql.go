@@ -223,7 +223,13 @@ func (cn *conn) readHello() (challange []byte, err error) {
 		cn.serverVersion = s[:len(s)-1]
 	}
 
-	v := strings.Split(cn.serverVersion, ".")
+	serverVersion := cn.serverVersion
+	if i := strings.IndexRune(serverVersion, '-'); i >= 0 {
+		// Remove the suffix from the returned mysql version
+		// (on debian-based systems the mysql version looks like "5.1.63-0+squeeze1")
+		serverVersion = serverVersion[:i]
+	}
+	v := strings.Split(serverVersion, ".")
 	cn.version = make([]byte, len(v))
 	for i := range v {
 		s := strings.TrimFunc(v[i], func(r rune) bool { return r < '0' || r > '9' })
