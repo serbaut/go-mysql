@@ -14,16 +14,19 @@ type packet struct {
 	bytes.Buffer
 }
 
-func newPacket(seq int) (p packet) {
-	p.Write([]byte{0, 0, 0, byte(seq)})
+func newPacket() (p packet) {
+	p.Write([]byte{0, 0, 0, 0})
 	return p
 }
 
-func readSize(r io.Reader) (int, error) {
+func readHeader(r io.Reader, seq byte) (int, error) {
 	var h [4]byte
 	_, err := io.ReadFull(r, h[:])
 	if err != nil {
 		return 0, err
+	}
+	if h[3] != seq {
+		return 0, fmt.Errorf("commands out of sync; only one command can be active per connection")
 	}
 	size := int(h[0]) + int(h[1])<<8 + int(h[2])<<16
 	if size == 0 || size > MAX_PACKET_SIZE {
@@ -32,8 +35,8 @@ func readSize(r io.Reader) (int, error) {
 	return size, nil
 }
 
-func (p *packet) ReadFrom(r io.Reader) (int64, error) {
-	size, err := readSize(r)
+func (p *packet) recv(r io.Reader, seq byte) (byte, error) {
+	size, err := readHeader(r, seq)
 	if err != nil {
 		return 0, err
 	}
@@ -42,7 +45,8 @@ func (p *packet) ReadFrom(r io.Reader) (int64, error) {
 		return 0, err
 	}
 	for size == MAX_PACKET_SIZE {
-		if size, err = readSize(r); err != nil {
+		seq += 1
+		if size, err = readHeader(r, seq); err != nil {
 			return 0, err
 		}
 		m := len(buf)
@@ -58,7 +62,7 @@ func (p *packet) ReadFrom(r io.Reader) (int64, error) {
 		}
 	}
 	p.Buffer = *bytes.NewBuffer(buf)
-	return int64(p.Len()), nil
+	return seq + 1, nil
 }
 
 func (p *packet) FirstByte() (v uint8) {
@@ -150,14 +154,15 @@ func (p *packet) SkipLCBytes() {
 	p.Next(int(n))
 }
 
-func (p *packet) WriteTo(w io.Writer) (n int64, err error) {
+func (p *packet) send(w io.Writer, seq byte) error {
 	buf := p.Bytes()
 	size := len(buf) - 4
 	buf[0] = byte(size)
 	buf[1] = byte(size >> 8)
 	buf[2] = byte(size >> 16)
-	nn, err := w.Write(buf)
-	return int64(nn), err
+	buf[3] = seq
+	_, err := w.Write(buf)
+	return err
 }
 
 func (p *packet) WriteUint16(v uint16) {

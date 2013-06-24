@@ -44,6 +44,7 @@ type conn struct {
 	debug              bool
 	allowLocalInfile   bool
 	charset            string
+	seq                byte
 }
 
 type stmt struct {
@@ -175,36 +176,53 @@ func connect(dsn string) (*conn, error) {
 	return cn, nil
 }
 
+func (cn *conn) newComPacket(com byte) (p packet) {
+	cn.seq = 0
+	p = newPacket()
+	p.WriteByte(com)
+	return p
+}
+
+func (cn *conn) recvPacket() (p packet, err error) {
+	cn.seq, err = p.recv(cn.bufrd, cn.seq)
+	return p, err
+}
+
+func (cn *conn) sendPacket(p packet) (err error) {
+	err = p.send(cn.netconn, cn.seq)
+	cn.seq += 1
+	return err
+}
+
 func (cn *conn) hello() error {
 	challange, err := cn.readHello()
 	if err != nil {
 		return err
 	}
-	seq := 1
 	if cn.tls != nil {
 		if cn.serverCapabilities&CLIENT_SSL == 0 {
 			return fmt.Errorf("server does not support SSL")
 		}
-		if err = cn.writeHello(seq, nil, CLIENT_SSL); err != nil {
+		if err = cn.writeHello(nil, CLIENT_SSL); err != nil {
 			return err
 		}
 		cn.netconn = tls.Client(cn.netconn, cn.tls)
-		seq++
 	}
-	if err := cn.writeHello(seq, challange, 0); err != nil {
+	if err := cn.writeHello(challange, 0); err != nil {
 		return err
 	}
 
 	var p packet
-	if _, err := p.ReadFrom(cn.netconn); err != nil {
+	if cn.seq, err = p.recv(cn.netconn, cn.seq); err != nil {
 		return err
 	}
+
 	switch p.FirstByte() {
 	case OK:
 	case ERR:
 		return p.ReadErr()
 	default:
-		return fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
+		return fmt.Errorf("hello: expected OK or ERR, got %v", p.FirstByte())
 	}
 
 	return nil
@@ -212,10 +230,9 @@ func (cn *conn) hello() error {
 
 func (cn *conn) readHello() (challange []byte, err error) {
 	var p packet
-	if _, err := p.ReadFrom(cn.netconn); err != nil {
+	if cn.seq, err = p.recv(cn.netconn, cn.seq); err != nil {
 		return nil, err
 	}
-
 	cn.protocolVersion = p.ReadUint8()
 	if s, err := p.ReadString('\x00'); err != nil {
 		return nil, err
@@ -240,8 +257,8 @@ func (cn *conn) readHello() (challange []byte, err error) {
 	return challange, nil
 }
 
-func (cn *conn) writeHello(seq int, challange []byte, flags uint32) error {
-	p := newPacket(seq)
+func (cn *conn) writeHello(challange []byte, flags uint32) error {
+	p := newPacket()
 	flags |= CLIENT_PROTOCOL_41 | CLIENT_SECURE_CONNECTION | CLIENT_LOCAL_FILES
 	if len(cn.db) > 0 {
 		flags |= CLIENT_CONNECT_WITH_DB
@@ -270,7 +287,7 @@ func (cn *conn) writeHello(seq int, challange []byte, flags uint32) error {
 			p.WriteByte(0)
 		}
 	}
-	_, err := p.WriteTo(cn.netconn)
+	err := cn.sendPacket(p)
 	return err
 }
 
@@ -326,12 +343,11 @@ func (cn *conn) Rollback() error {
 }
 
 func (cn *conn) Close() (err error) {
-	p := newPacket(0)
-	p.WriteByte(COM_QUIT)
-	if _, err := p.WriteTo(cn.netconn); err != nil {
+	p := cn.newComPacket(COM_QUIT)
+	if err := cn.sendPacket(p); err != nil {
 		return err
 	}
-	if _, err := p.ReadFrom(cn.bufrd); err != nil {
+	if _, err = cn.recvPacket(); err != nil {
 		return err
 	}
 	return cn.netconn.Close()
@@ -343,9 +359,9 @@ func (cn *conn) readColumns(n int) ([]column, error) {
 	}
 
 	cols := make([]column, n)
-	var p packet
 	for i := range cols {
-		if _, err := p.ReadFrom(cn.bufrd); err != nil {
+		p, err := cn.recvPacket()
+		if err != nil {
 			return nil, err
 		}
 		col := &cols[i]
@@ -362,11 +378,12 @@ func (cn *conn) readColumns(n int) ([]column, error) {
 		col.flags = p.ReadUint16()
 		col.decimals = p.ReadUint8()
 	}
-	if _, err := p.ReadFrom(cn.bufrd); err != nil {
+	p, err := cn.recvPacket()
+	if err != nil {
 		return nil, err
 	}
 	if x := p.ReadUint8(); x != EOF {
-		return nil, fmt.Errorf("expected EOF, got %v", x)
+		return nil, fmt.Errorf("readColumns: expected EOF, got %v", x)
 	}
 	return cols, nil
 }
@@ -405,13 +422,12 @@ func (cn *conn) query(query string) (r *result, err error) {
 	if len(query) > MAX_PACKET_SIZE {
 		return nil, fmt.Errorf("query exceeds %d bytes", MAX_PACKET_SIZE)
 	}
-	p := newPacket(0)
-	p.WriteByte(COM_QUERY)
+	p := cn.newComPacket(COM_QUERY)
 	p.WriteString(query)
-	if _, err = p.WriteTo(cn.netconn); err != nil {
+	if err = cn.sendPacket(p); err != nil {
 		return nil, err
 	}
-	if _, err = p.ReadFrom(cn.bufrd); err != nil {
+	if p, err = cn.recvPacket(); err != nil {
 		return nil, err
 	}
 
@@ -447,13 +463,12 @@ func (cn *conn) Prepare(query string) (driver.Stmt, error) {
 }
 
 func (cn *conn) prepare(query string) (st *stmt, err error) {
-	p := newPacket(0)
-	p.WriteByte(COM_STMT_PREPARE)
+	p := cn.newComPacket(COM_STMT_PREPARE)
 	p.WriteString(query)
-	if _, err := p.WriteTo(cn.netconn); err != nil {
+	if err := cn.sendPacket(p); err != nil {
 		return nil, err
 	}
-	if _, err := p.ReadFrom(cn.bufrd); err != nil {
+	if p, err = cn.recvPacket(); err != nil {
 		return nil, err
 	}
 
@@ -479,7 +494,7 @@ func (cn *conn) prepare(query string) (st *stmt, err error) {
 	case ERR:
 		return nil, p.ReadErr()
 	default:
-		return nil, fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
+		return nil, fmt.Errorf("prepare: expected OK or ERR, got %v", p.FirstByte())
 	}
 	return st, nil
 }
@@ -494,7 +509,6 @@ func (cn *conn) sendLocalFile(r *result, fn string) error {
 	}
 	defer f.Close()
 
-	seq := 2
 	buf := make([]byte, MAX_DATA_CHUNK)
 	for {
 		n, err := f.Read(buf)
@@ -502,23 +516,22 @@ func (cn *conn) sendLocalFile(r *result, fn string) error {
 			return err
 		}
 		if n > 0 {
-			p := newPacket(seq)
+			p := newPacket()
 			p.Write(buf[:n])
-			if _, err := p.WriteTo(cn.netconn); err != nil {
+			if err := cn.sendPacket(p); err != nil {
 				return err
 			}
-			seq += 1
 		}
 		if err == io.EOF {
 			break
 		}
 	}
-	p := newPacket(seq)
-	if _, err = p.WriteTo(cn.netconn); err != nil {
+	p := newPacket()
+	if err = cn.sendPacket(p); err != nil {
 		return err
 	}
 
-	if _, err = p.ReadFrom(cn.bufrd); err != nil {
+	if p, err = cn.recvPacket(); err != nil {
 		return err
 	}
 	switch p.FirstByte() {
@@ -529,7 +542,7 @@ func (cn *conn) sendLocalFile(r *result, fn string) error {
 	case ERR:
 		return p.ReadErr()
 	default:
-		return fmt.Errorf("expected OK or ERR, got %v", p.FirstByte())
+		return fmt.Errorf("sendLocalFile: expected OK or ERR, got %v", p.FirstByte())
 	}
 
 	return nil
@@ -568,12 +581,11 @@ func (st *stmt) Query(args []driver.Value) (driver.Rows, error) {
 
 func (st *stmt) sendLongData(paramId int, b *bytes.Buffer) error {
 	for b.Len() > 0 {
-		p := newPacket(0)
-		p.WriteByte(COM_STMT_SEND_LONG_DATA)
+		p := st.cn.newComPacket(COM_STMT_SEND_LONG_DATA)
 		p.WriteUint32(st.stmtId)
 		p.WriteUint16(uint16(paramId))
 		p.Write(b.Next(MAX_DATA_CHUNK))
-		if _, err := p.WriteTo(st.cn.netconn); err != nil {
+		if err := st.cn.sendPacket(p); err != nil {
 			return err
 		}
 	}
@@ -601,8 +613,7 @@ func (st *stmt) query(args []driver.Value) (r *result, err error) {
 		return nil, err
 	}
 
-	p := newPacket(0)
-	p.WriteByte(COM_STMT_EXECUTE)
+	p := st.cn.newComPacket(COM_STMT_EXECUTE)
 	p.WriteUint32(st.stmtId)
 	p.WriteByte(CURSOR_TYPE_NO_CURSOR)
 	p.WriteUint32(1)
@@ -617,10 +628,10 @@ func (st *stmt) query(args []driver.Value) (r *result, err error) {
 			return nil, err
 		}
 	}
-	if _, err = p.WriteTo(st.cn.netconn); err != nil {
+	if err = st.cn.sendPacket(p); err != nil {
 		return nil, err
 	}
-	if _, err = p.ReadFrom(st.cn.bufrd); err != nil {
+	if p, err = st.cn.recvPacket(); err != nil {
 		return nil, err
 	}
 
@@ -647,10 +658,12 @@ func (st *stmt) NumInput() int {
 }
 
 func (st *stmt) Close() error {
-	p := newPacket(0)
-	p.WriteByte(COM_STMT_CLOSE)
+	if st.cn.debug {
+		log.Println("close")
+	}
+	p := st.cn.newComPacket(COM_STMT_CLOSE)
 	p.WriteUint32(st.stmtId)
-	if _, err := p.WriteTo(st.cn.netconn); err != nil {
+	if err := st.cn.sendPacket(p); err != nil {
 		return err
 	}
 	return nil
@@ -725,8 +738,8 @@ func (r *result) Next(dest []driver.Value) (err error) {
 	if r.closed {
 		return io.EOF
 	}
-	var p packet
-	if _, err = p.ReadFrom(r.cn.bufrd); err != nil {
+	p, err := r.cn.recvPacket()
+	if err != nil {
 		return err
 	}
 
@@ -745,7 +758,7 @@ func (r *result) Next(dest []driver.Value) (err error) {
 	default:
 		if r.binary {
 			if h := p.ReadUint8(); h != 0 {
-				return fmt.Errorf("expected 0, got %v", h)
+				return fmt.Errorf("next: expected 0, got %v", h)
 			}
 			nullMask := p.ReadMask(len(r.columns) + 2)
 			nullMask = nullMask[2:]

@@ -129,12 +129,6 @@ func TestTypes(t *testing.T) {
 				if r, err = st2.Query(); err != nil {
 					t.Fatal(err)
 				}
-				if err = st1.Close(); err != nil {
-					t.Fatal(err)
-				}
-				if err = st2.Close(); err != nil {
-					t.Fatal(err)
-				}
 			}
 
 			if !r.Next() {
@@ -430,6 +424,26 @@ func TestNullTime(t *testing.T) {
 	}
 	if n != 2 {
 		t.Fatalf("got %v, want %v zero dates", n, 2)
+	}
+}
+
+func TestSync(t *testing.T) {
+	db, err := sql.Open("mysql", dsn2)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+
+	tx, err := db.Begin()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Query("select 1"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := tx.Query("select 2"); err == nil || !strings.Contains(err.Error(), "sync") {
+		t.Fatal("expected out of sync error")
 	}
 }
 
